@@ -1,6 +1,8 @@
 class Hangman
   STRIKES = 10
 
+  attr_reader :revealed_word
+
   def initialize(guessing_player, checking_player)
     if guessing_player == 'y'
       @guessing_player = HumanPlayer.new
@@ -26,11 +28,17 @@ class Hangman
       display
       puts "Strikes Remaining: #{strikes}\n\n"
       letter = @guessing_player.guess
+
       if @checking_player.check_guess(letter)
         @checking_player.handle_guess_response(letter)
       else
         strikes -= 1
       end
+
+      if @guessing_player.class == ComputerPlayer
+        @guessing_player.narrow_down_guesses(@checking_player.revealed_word)
+      end
+
     end
 
     if @checking_player.revealed_word.include?(nil)
@@ -108,7 +116,6 @@ class HumanPlayer
 end
 
 
-
 class ComputerPlayer
   attr_reader :revealed_word, :secret_length, :name
 
@@ -127,14 +134,19 @@ class ComputerPlayer
 
   def recieve_secret_length(length)
     @secret_length = length
+    @possible_words = @all_words.select do |word|
+      word.length == secret_length
+    end
   end
 
   def guess
-    possible_words = @all_words.select do |word|
-      word.length == secret_length
-    end
     while true
-      guess = possible_words.sample.split("").sample
+      if @guessed_letters.include?(most_frequent_letter)
+        guess = @possible_words.sample.split("").sample
+      else
+        guess = most_frequent_letter
+      end
+
       if @guessed_letters.include?(guess)
         next
       else
@@ -142,6 +154,47 @@ class ComputerPlayer
         return guess
       end
     end
+  end
+
+  def narrow_down_guesses(current_progress)
+
+    bad_letters = @guessed_letters.reject do |letter|
+      current_progress.include?(letter)
+    end
+
+    new_possible_words = []
+    @possible_words.each do |word|
+      match = true
+      current_progress.each.with_index do |letter,index|
+        next if letter.nil?
+        match = false if word[index] != letter
+      end
+
+      new_possible_words << word if match
+    end
+
+    bad_letters.each do |letter|
+      new_possible_words.reject! do |word|
+        word.include?(letter)
+      end
+    end
+
+    @possible_words = new_possible_words
+  end
+
+  def most_frequent_letter
+    letter_count = {}
+    @possible_words.each do |word|
+      ("a".."z").each do |letter|
+        if letter_count[letter]
+          letter_count[letter] += word.count(letter)
+        else
+          letter_count[letter] = word.count(letter)
+        end
+      end
+    end
+    max_count = letter_count.values.max
+    letter_count.key(max_count)
   end
 
   def check_guess(letter)
@@ -154,7 +207,6 @@ class ComputerPlayer
     end
   end
 
-
   def handle_guess_response(guess)
     @secret_word.each_char.with_index do |letter, idx|
       @revealed_word[idx] = letter if guess == letter
@@ -162,8 +214,6 @@ class ComputerPlayer
 
     nil
   end
-
-
 
 end
 
