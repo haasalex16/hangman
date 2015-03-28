@@ -19,24 +19,24 @@ class Hangman
   def play
     puts "Lets Play!"
     strikes = STRIKES
-    secret_word = @checking_player.pick_secret_word.split("")
-    display
-    puts "Strikes Remaining: #{strikes}\n\n"
+    @checking_player.pick_secret_word
+
     while @checking_player.revealed_word.include?(nil) && strikes > 0
+      display
+      puts "Strikes Remaining: #{strikes}\n\n"
       letter = @guessing_player.guess
       if @checking_player.check_guess(letter)
         @checking_player.handle_guess_response(letter)
       else
         strikes -= 1
       end
-      display
-      puts "Strikes Remaining: #{strikes}\n\n"
     end
 
     if @checking_player.revealed_word.include?(nil)
-      puts "Sorry You Lost"
+      puts "\n\nSorry You Lost"
     else
-      "You Win!"
+      puts "\nYou Win!"
+      puts "My word was '#{@checking_player.revealed_word.join.upcase}'\n\n"
     end
 
   end
