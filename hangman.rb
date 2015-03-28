@@ -20,6 +20,7 @@ class Hangman
     puts "Lets Play!"
     strikes = STRIKES
     @checking_player.pick_secret_word
+    @guessing_player.recieve_secret_length(@checking_player.secret_length)
 
     while @checking_player.revealed_word.include?(nil) && strikes > 0
       display
@@ -35,8 +36,8 @@ class Hangman
     if @checking_player.revealed_word.include?(nil)
       puts "\n\nSorry You Lost"
     else
-      puts "\nYou Win!"
-      puts "My word was '#{@checking_player.revealed_word.join.upcase}'\n\n"
+      puts "\nYou Win, #{@guessing_player.name}!"
+      puts "#{@checking_player.name}'s word was '#{@checking_player.revealed_word.join.upcase}'\n\n"
     end
 
   end
@@ -58,12 +59,20 @@ end
 
 
 class HumanPlayer
+  attr_reader :revealed_word, :secret_length, :name
 
-  def pick_secret_word
-
+  def initialize
+    puts "What is your name?"
+    @name = gets.chomp.capitalize
   end
 
-  def recieve_secret_length
+  def pick_secret_word
+    puts "How long is your secret word?"
+    @secret_length = gets.chomp.to_i
+    @revealed_word = Array.new(@secret_length) {nil}
+  end
+
+  def recieve_secret_length(length)
 
   end
 
@@ -72,13 +81,27 @@ class HumanPlayer
     letter = gets.chomp.downcase
   end
 
-  def check_guess
+  def check_guess(letter)
+    puts "Is '#{letter.upcase}' in your secret word? (y/n)"
+    included = gets.chomp.downcase
 
+    if included == "y"
+      true
+    else
+      false
+    end
   end
 
-  def handle_guess_response
+  def handle_guess_response(letter)
+    puts "What locations does your word include: '#{letter.upcase}'?"
+    puts "Please enter with spaces between each location. (ex. '2 4 6')"
+    locations = gets.chomp.split(" ")
 
+    locations.each do |location|
+      @revealed_word[location.to_i - 1] = letter
+    end
 
+    nil
   end
 
 
@@ -87,24 +110,38 @@ end
 
 
 class ComputerPlayer
-  attr_reader :revealed_word
+  attr_reader :revealed_word, :secret_length, :name
 
   def initialize
-    @possible_words = File.readlines('dictionary.txt').map(&:chomp)
+    @all_words = File.readlines('dictionary.txt').map(&:chomp)
+    @guessed_letters = []
+    @name = "Computer"
   end
 
   def pick_secret_word
-    @secret_word = @possible_words.sample
+    @secret_word = @all_words.sample
     @revealed_word = Array.new(@secret_word.length) {nil}
+    @secret_length = @secret_word.length
     @secret_word
   end
 
-  def recieve_secret_length
-
+  def recieve_secret_length(length)
+    @secret_length = length
   end
 
   def guess
-
+    possible_words = @all_words.select do |word|
+      word.length == secret_length
+    end
+    while true
+      guess = possible_words.sample.split("").sample
+      if @guessed_letters.include?(guess)
+        next
+      else
+        @guessed_letters << guess
+        return guess
+      end
+    end
   end
 
   def check_guess(letter)
@@ -122,6 +159,8 @@ class ComputerPlayer
     @secret_word.each_char.with_index do |letter, idx|
       @revealed_word[idx] = letter if guess == letter
     end
+
+    nil
   end
 
 
